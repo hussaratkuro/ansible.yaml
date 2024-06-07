@@ -1,0 +1,38 @@
+- name: Check disk space
+  hosts: all
+  vars:
+    notify_discord_username: Ansible
+    notify_discord_webhook_id: ''
+    notify_discord_webhook_token: ''
+    notify_discord_webhook_id_regex: '^0|[1-9][0-9]*$'
+    notify_discord_webhook_token_regex: '^[a-zA-Z0-9_-]+$'
+    notify_discord_webhook_content: |-
+      **Message from localhost by *Ansible* **
+      Disk usage is above 80%!
+    notify_discord_send_from_host: localhost
+
+  tasks:
+    - name: Check disk space available
+      ansible.builtin.shell:
+        cmd: |
+          set -euo pipefail
+          df -Ph / | awk 'NR==2 {print $5}'
+        executable: /bin/bash
+      changed_when: false
+      check_mode: false
+      register: disk_usage
+
+# Send discord notification when disk usage is above 80%
+    - name: Send Discord message
+      community.general.discord:
+        username: "{{ notify_discord_username }}"
+        webhook_id: "{{ notify_discord_webhook_id }}"
+        webhook_token: "{{ notify_discord_webhook_token }}"
+        content: "{{ notify_discord_webhook_content }}"
+      delegate_to: "{{ notify_discord_send_from_host }}"
+      when:
+        - notify_discord_webhook_id is match(notify_discord_webhook_id_regex)
+        - notify_discord_webhook_token is match(notify_discord_webhook_token_regex)
+        - notify_discord_webhook_content | length > 0
+        - notify_discord_send_from_host is in (['localhost'] + groups['all'])
+        - disk_usage.stdout[:-1]|int > 80
