@@ -1,0 +1,29 @@
+- name: Notify discord
+  hosts: all
+  vars:
+    notify_discord_username: Ansible
+    notify_discord_webhook_id: ''
+    notify_discord_webhook_token: ''
+    notify_discord_webhook_id_regex: '^0|[1-9][0-9]*$'
+    notify_discord_webhook_token_regex: '^[a-zA-Z0-9_-]+$'
+
+  # Customize your messege here
+    notify_discord_webhook_content: |-
+      **Message from localhost by *Ansible* ** :tada:
+      Just a test.
+    notify_discord_send_from_host: localhost
+
+  gather_facts: no
+  tasks:
+    - name: Send Discord message
+      community.general.discord:
+        username: "{{ notify_discord_username }}"
+        webhook_id: "{{ notify_discord_webhook_id }}"
+        webhook_token: "{{ notify_discord_webhook_token }}"
+        content: "{{ notify_discord_webhook_content }}"
+      delegate_to: "{{ notify_discord_send_from_host }}"
+      when:
+        - notify_discord_webhook_id is match(notify_discord_webhook_id_regex)
+        - notify_discord_webhook_token is match(notify_discord_webhook_token_regex)
+        - notify_discord_webhook_content | length > 0
+        - notify_discord_send_from_host is in (['localhost'] + groups['all'])
